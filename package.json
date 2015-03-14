@@ -1,0 +1,9 @@
+{
+  "name": "zefti-error-handler",
+  "description": "Zefti Error Handler",
+  "author": "Ryan Ogle",
+  "dependencies": {
+  },
+  "private": false,
+  "version": "0.0.1"
+}
