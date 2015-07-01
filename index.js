@@ -1,4 +1,4 @@
-var utils = require('zefti-utils')({});
+var utils = require('zefti-utils');
 var env = 'prod';
 var errLevel = 1;
 var _ = require('underscore');
@@ -15,18 +15,18 @@ var defaultSev = {
 
 var errorHandler = function(options){
   this.errors = {};
-  this.sev = options.sev || defaultSev;
-  if (options.env === 'dev') errLevel = 7;
+  this.sev = defaultSev;
+  //if (this.env === 'dev') errLevel = 7;
 };
 
-error.prototype.addErrors = fucntion(errObj){
+errorHandler.prototype.addErrors = function(errObj){
   if (utils.type(errObj) !== 'object') {
     throw new Error('addErrors must pass in an object as an argument');
   }
   _.extend(this.errors, errObj);
 }
 
-error.prototype.lookup(errCode){
+errorHandler.prototype.lookup = function(errCode){
   var error = this.errors[errCode];
   return error;
 }
@@ -54,7 +54,7 @@ errorHandler.prototype.parseError = function(err){
   } else {
     var error = new Error();
     error.msg = 'err provided is not a string or an object: ' + err;
-    return throw error;
+    throw error;
   }
   return errResponse;
 };
