@@ -3,7 +3,7 @@ var env = 'prod';
 var errLevel = 1;
 var _ = require('underscore');
 var Logger = require('zefti-logger');
-var logger = new Logger();
+
 
 var defaultSev = {
     s1: ['logInfo']
@@ -16,6 +16,12 @@ var defaultSev = {
 var errorHandler = function(options){
   this.errors = {};
   this.sev = defaultSev;
+  if (options.logger) {
+    this.logger = options.logger
+  } else {
+    this.logger = new Logger();
+  }
+  return this;
   //if (this.env === 'dev') errLevel = 7;
 };
 
@@ -23,17 +29,18 @@ errorHandler.prototype.addErrors = function(errObj){
   if (utils.type(errObj) !== 'object') {
     throw new Error('addErrors must pass in an object as an argument');
   }
-  _.extend(this.errors, errObj);
-}
+  _.extend(this.errors, errObj.errorCodes);
+};
 
 errorHandler.prototype.lookup = function(errCode){
   var error = this.errors[errCode];
   return error;
-}
+};
 
 errorHandler.prototype.send = function(err, res){
   var errResponse = this.parseError(err);
-  sevFunctions(err);
+
+  this.sevFunctions(err, errResponse);
   res.status(500).send(errResponse);
 };
 
@@ -42,13 +49,21 @@ errorHandler.prototype.log = function(err, res){
   var errResponse = this.parseError(err);
 };
 
+
+
 errorHandler.prototype.parseError = function(err){
+  var self = this;
   var errResponse = {};
   errResponse.time = new Date();
   if (utils.type(err) === 'string') {
     errResponse.msg = err;
   } else if (utils.type(err) === 'object') {
-    errResponse.msg = err.eMsg || this.errors[err.errCode];
+    if (err.fields) {
+      var compiled = _.template(self.errors[err.errCode].eMsg);
+      errResponse.msg = compiled(err.fields);
+    } else {
+      errResponse.msg = this.errors[err.errCode].eMsg || this.errors[err.errCode] || 'error not defined';
+    }
     errResponse.code = err.code || err.errCode;
     if (err.payload && err.payload.uid) errResponse.uid = err.payload.uid;
   } else {
@@ -59,39 +74,44 @@ errorHandler.prototype.parseError = function(err){
   return errResponse;
 };
 
-function sevFunctions(err){
-  if (!err || err.sev) return;
-  var sev = 's' + err.sev;
-  this.sev[sev].forEach(function(func){
-    func(errRseponse);
+errorHandler.prototype.sevFunctions = function(err, errResponse){
+  var self = this;
+  if (!err || err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
+  var sev = 's' + this.errors[err.errCode].sev;
+  this.sev[sev].forEach(function (func) {
+    self[func](errResponse);
   });
-}
+};
 
-function logInfo(errResponse){
-  logger.info(errResponse);
-}
 
-function logWarn(errResponse){
-  logger.warn(errResponse);
-}
 
-function logCritical(errResponse){
-  logger.critical(errResponse);
-}
+//TODO: remove all the console logs and use logger
+errorHandler.prototype.logInfo = function(errResponse){
+  console.log(errResponse);
+  //this.logger.info(errResponse);
+};
 
-function email(errResponse){
+errorHandler.prototype.logWarn = function(errResponse){
+  console.log(errResponse);
+  //this.logger.warn(errResponse);
+};
+
+errorHandler.prototype.logCritical = function(errResponse){
+  console.log(errResponse);
+  //this.logger.critical(errResponse);
+};
+
+errorHandler.prototype.email = function(errResponse){
   //TODO: email
-}
+};
 
-function sms(errResponse){
+errorHandler.prototype.sms = function(errResponse){
   //TODO: sms
-}
+};
+
 
 /*not sure about this::
- if (err.fields) {
-   var compiled = _.template(error.eMsg);
-   errResponse.msg = compiled(err.fields);
- }
+
  */
 
 
