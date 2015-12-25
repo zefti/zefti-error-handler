@@ -62,6 +62,9 @@ errorHandler.prototype.parseError = function(err){
       var compiled = _.template(self.errors[err.errCode].eMsg);
       errResponse.msg = compiled(err.fields);
     } else {
+      console.log(err.errCode);
+      console.log(this);
+      console.log('======')
       errResponse.msg = this.errors[err.errCode].eMsg || this.errors[err.errCode] || 'error not defined';
     }
     errResponse.code = err.code || err.errCode;
