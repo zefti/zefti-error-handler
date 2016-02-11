@@ -13,8 +13,11 @@ var defaultSev = {
   , s5: ['logCritical', 'sms']
 };
 
-var errorHandler = function(options){
-  this.errors = {};
+var errorHandler = {
+  errors: {}
+};
+
+errorHandler.init = function(options){
   this.sev = defaultSev;
   if (options.logger) {
     this.logger = options.logger
@@ -23,35 +26,35 @@ var errorHandler = function(options){
   }
   return this;
   //if (this.env === 'dev') errLevel = 7;
-};
+}
 
-errorHandler.prototype.addErrors = function(errObj){
+errorHandler.addErrors = function(errObj){
   if (utils.type(errObj) !== 'object') {
     throw new Error('addErrors must pass in an object as an argument');
   }
   _.extend(this.errors, errObj.errorCodes);
 };
 
-errorHandler.prototype.lookup = function(errCode){
+errorHandler.lookup = function(errCode){
   var error = this.errors[errCode];
   return error;
 };
 
-errorHandler.prototype.send = function(err, res){
+errorHandler.send = function(err, res){
   var errResponse = this.parseError(err);
 
   this.sevFunctions(err, errResponse);
   res.status(500).send(errResponse);
 };
 
-errorHandler.prototype.log = function(err, res){
+errorHandler.log = function(err, res){
   sevFunctions(err);
   var errResponse = this.parseError(err);
 };
 
 
 
-errorHandler.prototype.parseError = function(err){
+errorHandler.parseError = function(err){
   var self = this;
   var errResponse = {};
   errResponse.time = new Date();
@@ -77,7 +80,7 @@ errorHandler.prototype.parseError = function(err){
   return errResponse;
 };
 
-errorHandler.prototype.sevFunctions = function(err, errResponse){
+errorHandler.sevFunctions = function(err, errResponse){
   var self = this;
   if (!err || err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
   var sev = 's' + this.errors[err.errCode].sev;
@@ -89,26 +92,26 @@ errorHandler.prototype.sevFunctions = function(err, errResponse){
 
 
 //TODO: remove all the console logs and use logger
-errorHandler.prototype.logInfo = function(errResponse){
+errorHandler.logInfo = function(errResponse){
   console.log(errResponse);
   //this.logger.info(errResponse);
 };
 
-errorHandler.prototype.logWarn = function(errResponse){
+errorHandler.logWarn = function(errResponse){
   console.log(errResponse);
   //this.logger.warn(errResponse);
 };
 
-errorHandler.prototype.logCritical = function(errResponse){
+errorHandler.logCritical = function(errResponse){
   console.log(errResponse);
   //this.logger.critical(errResponse);
 };
 
-errorHandler.prototype.email = function(errResponse){
+errorHandler.email = function(errResponse){
   //TODO: email
 };
 
-errorHandler.prototype.sms = function(errResponse){
+errorHandler.sms = function(errResponse){
   //TODO: sms
 };
 
