@@ -6,11 +6,11 @@ var Logger = require('zefti-logger');
 
 
 var defaultSev = {
-    s1: ['logInfo']
+    s1: ['logCritical']
   , s2: ['logWarn']
-  , s3: ['logCritical']
-  , s4: ['logCritical', 'email']
-  , s5: ['logCritical', 'sms']
+  , s3: ['logInfo']
+  , s4: []
+  , s5: []
 };
 
 var errorHandler = {
@@ -26,7 +26,7 @@ errorHandler.init = function(options){
   }
   return this;
   //if (this.env === 'dev') errLevel = 7;
-}
+};
 
 errorHandler.addErrors = function(errObj){
   if (utils.type(errObj) !== 'object') {
@@ -48,8 +48,9 @@ errorHandler.send = function(err, res){
 };
 
 errorHandler.log = function(err, res){
-  sevFunctions(err);
+  console.log('in errorhandler log');
   var errResponse = this.parseError(err);
+  this.sevFunctions(err, errRespponse);
 };
 
 
@@ -82,7 +83,7 @@ errorHandler.parseError = function(err){
 
 errorHandler.sevFunctions = function(err, errResponse){
   var self = this;
-  if (!err || err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
+  if (!err || !err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
   var sev = 's' + this.errors[err.errCode].sev;
   this.sev[sev].forEach(function (func) {
     self[func](errResponse);
@@ -107,18 +108,6 @@ errorHandler.logCritical = function(errResponse){
   //this.logger.critical(errResponse);
 };
 
-errorHandler.email = function(errResponse){
-  //TODO: email
-};
-
-errorHandler.sms = function(errResponse){
-  //TODO: sms
-};
-
-
-/*not sure about this::
-
- */
 
 
 
