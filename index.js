@@ -25,7 +25,6 @@ errorHandler.init = function(options){
     this.logger = new Logger();
   }
   return this;
-  //if (this.env === 'dev') errLevel = 7;
 };
 
 errorHandler.addErrors = function(errObj){
@@ -50,7 +49,7 @@ errorHandler.send = function(err, res){
 errorHandler.log = function(err, res){
   console.log('in errorhandler log');
   var errResponse = this.parseError(err);
-  this.sevFunctions(err, errRespponse);
+  this.sevFunctions(err, errResponse);
 };
 
 
@@ -67,7 +66,6 @@ errorHandler.parseError = function(err){
       errResponse.msg = compiled(err.fields);
     } else {
       console.log(err.errCode);
-      console.log(this);
       console.log('======')
       errResponse.msg = this.errors[err.errCode].eMsg || this.errors[err.errCode] || 'error not defined';
     }
@@ -83,7 +81,12 @@ errorHandler.parseError = function(err){
 
 errorHandler.sevFunctions = function(err, errResponse){
   var self = this;
+  console.log('before')
+  console.log(err);
+  console.log(errResponse);
+  console.log(this.errors[err.errCode]);
   if (!err || !err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
+  console.log('after')
   var sev = 's' + this.errors[err.errCode].sev;
   this.sev[sev].forEach(function (func) {
     self[func](errResponse);
@@ -94,17 +97,17 @@ errorHandler.sevFunctions = function(err, errResponse){
 
 //TODO: remove all the console logs and use logger
 errorHandler.logInfo = function(errResponse){
-  console.log(errResponse);
+  console.log('in logInfo');
   //this.logger.info(errResponse);
 };
 
 errorHandler.logWarn = function(errResponse){
-  console.log(errResponse);
+  console.log('in logWarn');
   //this.logger.warn(errResponse);
 };
 
 errorHandler.logCritical = function(errResponse){
-  console.log(errResponse);
+  console.log('in logCritical');
   //this.logger.critical(errResponse);
 };
 
