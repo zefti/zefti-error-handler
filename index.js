@@ -1,11 +1,16 @@
 var utils = require('zefti-utils');
 var env = 'prod';
-var errLevel = 1;
 var _ = require('underscore');
 var Logger = require('zefti-logger');
+var Request = require('zefti-request');
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+app.use(bodyParser.json()); // for parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 
-var defaultSev = {
+var defaultSevMatrix = {
     s1: ['logCritical']
   , s2: ['logWarn']
   , s3: ['logInfo']
@@ -18,7 +23,7 @@ var errorHandler = {
 };
 
 errorHandler.init = function(options){
-  this.sev = defaultSev;
+  this.sev = options.sevMatrix || defaultSevMatrix;
   if (options.logger) {
     this.logger = options.logger
   } else {
@@ -41,54 +46,59 @@ errorHandler.lookup = function(errCode){
 
 errorHandler.send = function(err, res){
   var errResponse = this.parseError(err);
-
-  this.sevFunctions(err, errResponse);
-  res.status(500).send(errResponse);
+  this.sevFunctions(errResponse);
+  var httpCode = errResponse.httpCode || 500;
+  delete errResponse.sev;
+  delete errResponse.status;
+  res.status(httpCode).send(errResponse);
 };
 
-errorHandler.log = function(err, res){
-  console.log('in errorhandler log');
+errorHandler.log = function(err){
   var errResponse = this.parseError(err);
-  this.sevFunctions(err, errResponse);
+  this.sevFunctions(errResponse);
 };
 
 
 
-errorHandler.parseError = function(err){
+errorHandler.parseError = function(err) {
   var self = this;
   var errResponse = {};
-  errResponse.time = new Date();
-  if (utils.type(err) === 'string') {
+  errResponse.st = new Date().toString();
+  if (!err) {
+    errResponse.msg = 'no error provided to errHandler';
+    return errResponse;
+  } else if (utils.type(err) !== 'string' && utils.type(err) !== 'object') {
+    errResponse.msg = 'unknown err type';
+  } else if (utils.type(err) === 'string') {
     errResponse.msg = err;
-  } else if (utils.type(err) === 'object') {
+  } else if (!self.errors) {
+    errResponse.msg = 'no errors to evaluate';
+  } else if (!err.errCode) {
+    errResponse.msg = 'no errCode provided';
+  } else if (!self.errors[err.errCode]) {
+    errResponse.msg = 'no matched errCode';
+  } else if (!self.errors[err.errCode].eMsg) {
+    errResponse.msg = 'no eMsg defined';
+    errResponse.sev = self.errors[err.errCode].sev;
+  } else {
+    errResponse.sev = self.errors[err.errCode].sev;
     if (err.fields) {
       var compiled = _.template(self.errors[err.errCode].eMsg);
       errResponse.msg = compiled(err.fields);
     } else {
-      console.log(err.errCode);
-      console.log('======')
-      errResponse.msg = this.errors[err.errCode].eMsg || this.errors[err.errCode] || 'error not defined';
+      errResponse.msg = self.errors[err.errCode].eMsg;
     }
-    errResponse.code = err.code || err.errCode;
-    if (err.payload && err.payload.uid) errResponse.uid = err.payload.uid;
-  } else {
-    var error = new Error();
-    error.msg = 'err provided is not a string or an object: ' + err;
-    throw error;
   }
+
+  errResponse.errCode = err.errCode;
+  if (err.payload && err.payload.uid) errResponse.uid = err.payload.uid;
   return errResponse;
 };
 
-errorHandler.sevFunctions = function(err, errResponse){
+errorHandler.sevFunctions = function(errResponse){
   var self = this;
-  console.log('before')
-  console.log(err);
-  console.log(errResponse);
-  console.log(this.errors[err.errCode]);
-  if (!err || !err.sev || !this.errors[err.errCode] || utils.type(err) !== 'object') return;
-  console.log('after')
-  var sev = 's' + this.errors[err.errCode].sev;
-  this.sev[sev].forEach(function (func) {
+  var errSev = errResponse.sev || 's3';
+  this.sev[errSev].forEach(function (func) {
     self[func](errResponse);
   });
 };
@@ -97,18 +107,15 @@ errorHandler.sevFunctions = function(err, errResponse){
 
 //TODO: remove all the console logs and use logger
 errorHandler.logInfo = function(errResponse){
-  console.log('in logInfo');
-  //this.logger.info(errResponse);
+  this.logger.info(errResponse);
 };
 
 errorHandler.logWarn = function(errResponse){
-  console.log('in logWarn');
-  //this.logger.warn(errResponse);
+  this.logger.warn(errResponse);
 };
 
 errorHandler.logCritical = function(errResponse){
-  console.log('in logCritical');
-  //this.logger.critical(errResponse);
+  this.logger.critical(errResponse);
 };
 
 
