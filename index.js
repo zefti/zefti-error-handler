@@ -58,6 +58,12 @@ errorHandler.log = function(err){
   this.sevFunctions(errResponse);
 };
 
+errorHandler.emit = function(err, socket){
+  var errResponse = this.parseError(err);
+  this.sevFunctions(errResponse);
+  socket.emit('err', errResponse);
+};
+
 
 
 errorHandler.parseError = function(err) {
@@ -82,6 +88,7 @@ errorHandler.parseError = function(err) {
     errResponse.sev = self.errors[err.errCode].sev;
   } else {
     errResponse.sev = self.errors[err.errCode].sev;
+    errResponse.description = self.errors[err.errCode].description;
     if (err.fields) {
       var compiled = _.template(self.errors[err.errCode].eMsg);
       errResponse.msg = compiled(err.fields);
